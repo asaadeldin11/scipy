@@ -3,8 +3,6 @@
 # Author:  Travis Oliphant  2002-2011 with contributions from
 #          SciPy Developers 2004-2011
 #
-from __future__ import division, print_function, absolute_import
-
 import warnings
 import functools
 import collections
@@ -361,6 +359,17 @@ class norm_gen(rv_continuous):
             scale = fscale
 
         return loc, scale
+
+    def _munp(self, n):
+        """
+        @returns Moments of standard normal distribution for integer n >= 0
+
+        See eq. 16 of https://arxiv.org/abs/1209.4340v2
+        """
+        if n % 2 == 0:
+            return sc.factorial2(n - 1)
+        else:
+            return 0.
 
 
 norm = norm_gen(name='norm')
@@ -2898,7 +2907,7 @@ class gamma_gen(rv_continuous):
                 # shape and scale are both free.
                 # The MLE for the shape parameter `a` is the solution to:
                 # np.log(a) - sc.digamma(a) - np.log(xbar) +
-                #                             np.log(data.mean) = 0
+                #                             np.log(data).mean() = 0
                 s = np.log(xbar) - np.log(data).mean()
                 func = lambda a: np.log(a) - sc.digamma(a) - s
                 aest = (3-s + np.sqrt((s-3)**2 + 24*s)) / (12*s)
@@ -3924,8 +3933,8 @@ class norminvgauss_gen(rv_continuous):
 
     .. math::
 
-        f(x, a, b) = (a \exp(\sqrt{a^2 - b^2} + b x)) /
-                     (\pi \sqrt{1 + x^2} \, K_1(a \sqrt{1 + x^2}))
+        f(x, a, b) = \frac{a \, K_1(a \sqrt{1 + x^2})}{\pi \sqrt{1 + x^2}} \,
+                     \exp(\sqrt{a^2 - b^2} + b x)
 
     where :math:`x` is a real number, the parameter :math:`a` is the tail
     heaviness and :math:`b` is the asymmetry parameter satisfying
@@ -5742,27 +5751,38 @@ class ncf_gen(rv_continuous):
     .. math::
 
         f(x, n_1, n_2, \lambda) =
-                          \exp(\frac{\lambda}{2} + \lambda n_1 \frac{x}{2(n_1 x+n_2)})
-                          n_1^{n_1/2} n_2^{n_2/2} x^{n_1/2 - 1} \\
-                          (n_2+n_1 x)^{-(n_1+n_2)/2}
-                          \gamma(n_1/2) \gamma(1+n_2/2) \\
-                         \frac{L^{\frac{v_1}{2}-1}_{v_2/2}
-                               (-\lambda v_1 \frac{x}{2(v_1 x+v_2)})}
-                              {B(v_1/2, v_2/2)  \gamma(\frac{v_1+v_2}{2})}
+            \exp\left(\frac{\lambda}{2} +
+                      \lambda n_1 \frac{x}{2(n_1 x + n_2)}
+                \right)
+            n_1^{n_1/2} n_2^{n_2/2} x^{n_1/2 - 1} \\
+            (n_2 + n_1 x)^{-(n_1 + n_2)/2}
+            \gamma(n_1/2) \gamma(1 + n_2/2) \\
+            \frac{L^{\frac{n_1}{2}-1}_{n_2/2}
+                \left(-\lambda n_1 \frac{x}{2(n_1 x + n_2)}\right)}
+            {B(n_1/2, n_2/2)
+                \gamma\left(\frac{n_1 + n_2}{2}\right)}
 
-    for :math:`n_1 > 1`, :math:`n_2, \lambda > 0`.  Here :math:`n_1` is the
+    for :math:`n_1, n_2 > 0`, :math:`\lambda\geq 0`.  Here :math:`n_1` is the
     degrees of freedom in the numerator, :math:`n_2` the degrees of freedom in
     the denominator, :math:`\lambda` the non-centrality parameter,
     :math:`\gamma` is the logarithm of the Gamma function, :math:`L_n^k` is a
     generalized Laguerre polynomial and :math:`B` is the beta function.
 
-    `ncf` takes ``df1``, ``df2`` and ``nc`` as shape parameters.
+    `ncf` takes ``df1``, ``df2`` and ``nc`` as shape parameters. If ``nc=0``,
+    the distribution becomes equivalent to the Fisher distribution.
 
     %(after_notes)s
+
+    See Also
+    --------
+    scipy.stats.f : Fisher distribution
 
     %(example)s
 
     """
+    def _argcheck(self, df1, df2, nc):
+        return (df1 > 0) & (df2 > 0) & (nc >= 0)
+
     def _rvs(self, dfn, dfd, nc):
         return self._random_state.noncentral_f(dfn, dfd, nc, self._size)
 

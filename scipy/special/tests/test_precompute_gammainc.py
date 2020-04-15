@@ -1,5 +1,3 @@
-from __future__ import division, print_function, absolute_import
-
 import numpy as np  # np is actually used, in the decorators below.
 import pytest
 
@@ -16,7 +14,7 @@ except ImportError:
     sympy = MissingModule('sympy')
 
 try:
-    import mpmath as mp
+    import mpmath as mp  # type: ignore[import]
 except ImportError:
     mp = MissingModule('mpmath')
 

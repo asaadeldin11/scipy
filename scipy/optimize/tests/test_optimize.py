@@ -9,8 +9,6 @@ To run it in its simplest form::
   nosetests test_optimize.py
 
 """
-from __future__ import division, print_function, absolute_import
-
 import itertools
 import multiprocessing
 import numpy as np
@@ -836,7 +834,7 @@ class TestOptimizeSimple(CheckOptimize):
                 return optimize.minimize(*a, **kw)
 
             if method == 'tnc':
-                kwargs['options'] = dict(maxiter=100)
+                kwargs['options'] = dict(maxfun=100)
             else:
                 kwargs['options'] = dict(maxiter=5)
 
@@ -907,8 +905,7 @@ class TestOptimizeSimple(CheckOptimize):
         assert_allclose(res.x, np.array([0., 2, 5, 8])/3, atol=1e-12)
 
     @pytest.mark.parametrize('method', ['Nelder-Mead', 'Powell', 'CG', 'BFGS',
-                                        'Newton-CG', 'L-BFGS-B',
-                                        # 'TNC', 'SLSQP',
+                                        'Newton-CG', 'L-BFGS-B', 'SLSQP',
                                         'trust-constr', 'dogleg', 'trust-ncg',
                                         'trust-exact', 'trust-krylov'])
     def test_respect_maxiter(self, method):
@@ -932,10 +929,14 @@ class TestOptimizeSimple(CheckOptimize):
             kwargs['hess'] = sf.hess
 
         sol = optimize.minimize(sf.fun, x0, **kwargs)
-        assert sol.nit <= MAXITER
+        assert sol.nit == MAXITER
         assert sol.nfev >= sf.nfev
         if hasattr(sol, 'njev'):
             assert sol.njev >= sf.ngev
+
+        # method specific tests
+        if method == 'SLSQP':
+            assert sol.status == 9  # Iteration limit reached
 
     def test_respect_maxiter_trust_constr_ineq_constraints(self):
         # special case of minimization with trust-constr and inequality
@@ -1157,6 +1158,16 @@ class TestLBFGSBBounds(object):
                                 jac=self.jac, bounds=self.bounds)
         assert_(res['success'], res['message'])
         assert_allclose(res.x, self.solution, atol=1e-6)
+
+    @pytest.mark.parametrize('bounds', [
+        ([(10, 1), (1, 10)]),
+        ([(1, 10), (10, 1)]),
+        ([(10, 1), (10, 1)])
+    ])
+    def test_minimize_l_bfgs_b_incorrect_bounds(self, bounds):
+        with pytest.raises(ValueError, match='.*bounds.*'):
+            optimize.minimize(self.fun, [0, -1], method='L-BFGS-B',
+                              jac=self.jac, bounds=bounds)
 
     def test_minimize_l_bfgs_b_bounds_FD(self):
         # test that initial starting value outside bounds doesn't raise
@@ -1554,9 +1565,6 @@ class TestBrute:
 
         optimize.brute(f, [(-1, 1)], Ns=3, finish=None)
 
-    @pytest.mark.skipif(multiprocessing.get_start_method() != 'fork',
-                        reason=('multiprocessing with spawn method is not'
-                                ' compatible with pytest.'))
     def test_workers(self):
         # check that parallel evaluation works
         resbrute = optimize.brute(brute_func, self.rranges, args=self.params,

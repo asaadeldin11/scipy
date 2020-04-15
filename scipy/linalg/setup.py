@@ -1,5 +1,3 @@
-from __future__ import division, print_function, absolute_import
-
 from os.path import join
 
 
@@ -7,7 +5,7 @@ def configuration(parent_package='', top_path=None):
     from distutils.sysconfig import get_python_inc
     from scipy._build_utils.system_info import get_info, numpy_info
     from numpy.distutils.misc_util import Configuration, get_numpy_include_dirs
-    from scipy._build_utils import get_g77_abi_wrappers
+    from scipy._build_utils import get_g77_abi_wrappers, gfortran_legacy_flag_hook
 
     config = Configuration('linalg', parent_package, top_path)
 
@@ -70,11 +68,12 @@ def configuration(parent_package='', top_path=None):
                          )
 
     # _interpolative:
-    config.add_extension('_interpolative',
-                         sources=[join('src', 'id_dist', 'src', '*.f'),
-                                  "interpolative.pyf"],
-                         extra_info=lapack_opt
-                         )
+    ext = config.add_extension('_interpolative',
+                               sources=[join('src', 'id_dist', 'src', '*.f'),
+                                        "interpolative.pyf"],
+                               extra_info=lapack_opt
+                               )
+    ext._pre_build_hook = gfortran_legacy_flag_hook
 
     # _solve_toeplitz:
     config.add_extension('_solve_toeplitz',
@@ -120,7 +119,5 @@ def configuration(parent_package='', top_path=None):
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
-    from linalg_version import linalg_version
 
-    setup(version=linalg_version,
-          **configuration(top_path='').todict())
+    setup(**configuration(top_path='').todict())

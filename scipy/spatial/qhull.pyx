@@ -10,8 +10,6 @@ Wrappers for Qhull triangulation, plus some additional N-D geometry utilities
 # Distributed under the same BSD license as Scipy.
 #
 
-from __future__ import absolute_import
-
 import threading
 import numpy as np
 cimport numpy as np
@@ -2766,7 +2764,7 @@ class HalfspaceIntersection(_QhullUser):
     >>> c[-1] = -1
     >>> A = np.hstack((halfspaces[:, :-1], norm_vector))
     >>> b = - halfspaces[:, -1:]
-    >>> res = linprog(c, A_ub=A, b_ub=b)
+    >>> res = linprog(c, A_ub=A, b_ub=b, bounds=(None, None))
     >>> x = res.x[:-1]
     >>> y = res.x[-1]
     >>> circle = Circle(x, radius=y, alpha=0.3)

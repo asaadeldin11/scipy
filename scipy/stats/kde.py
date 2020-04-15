@@ -17,8 +17,6 @@
 #
 #-------------------------------------------------------------------------------
 
-from __future__ import division, print_function, absolute_import
-
 # Standard library imports.
 import warnings
 
@@ -239,7 +237,8 @@ class gaussian_kde(object):
                     self.d)
                 raise ValueError(msg)
 
-        result = zeros((m,), dtype=float)
+        output_dtype = np.common_type(self.covariance, points)
+        result = zeros((m,), dtype=output_dtype)
 
         whitening = linalg.cholesky(self.inv_cov)
         scaled_dataset = dot(whitening, self.dataset)

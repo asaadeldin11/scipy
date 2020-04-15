@@ -33,8 +33,6 @@ Functions
 
 ## Modifications by Travis Oliphant and Enthought, Inc. for inclusion in SciPy
 
-from __future__ import division, print_function, absolute_import
-
 import numpy as np
 from numpy import array, asarray, float64, int32, zeros
 from . import _lbfgsb
@@ -290,6 +288,11 @@ def _minimize_lbfgsb(fun, x0, args=(), jac=None, bounds=None,
     # LBFGSB is sent 'old-style' bounds, 'new-style' bounds are required by
     # approx_derivative and ScalarFunction
     new_bounds = old_bound_to_new(bounds)
+
+    # check bounds
+    if (new_bounds[0] > new_bounds[1]).any():
+        raise ValueError("LBFGSB - one of the lower bounds is greater than an upper bound.")
+
     # initial vector must lie within the bounds. Otherwise ScalarFunction and
     # approx_derivative will cause problems
     x0 = np.clip(x0, new_bounds[0], new_bounds[1])
@@ -346,7 +349,7 @@ def _minimize_lbfgsb(fun, x0, args=(), jac=None, bounds=None,
         _lbfgsb.setulb(m, x, low_bnd, upper_bnd, nbd, f, g, factr,
                        pgtol, wa, iwa, task, iprint, csave, lsave,
                        isave, dsave, maxls)
-        task_str = task.tostring()
+        task_str = task.tobytes()
         if task_str.startswith(b'FG'):
             # The minimization routine wants f and g at the current x.
             # Note that interruptions due to maxfun are postponed
@@ -367,7 +370,7 @@ def _minimize_lbfgsb(fun, x0, args=(), jac=None, bounds=None,
         else:
             break
 
-    task_str = task.tostring().strip(b'\x00').strip()
+    task_str = task.tobytes().strip(b'\x00').strip()
     if task_str.startswith(b'CONV'):
         warnflag = 0
     elif sf.nfev > maxfun or n_iterations >= maxiter:
@@ -418,6 +421,7 @@ class LbfgsInvHessProduct(LinearOperator):
        storage." Mathematics of computation 35.151 (1980): 773-782.
 
     """
+
     def __init__(self, sk, yk):
         """Construct the operator."""
         if sk.shape != yk.shape or sk.ndim != 2:

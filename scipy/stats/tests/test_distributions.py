@@ -1,8 +1,6 @@
 """ Test functions for stats module
 
 """
-from __future__ import division, print_function, absolute_import
-
 import warnings
 import re
 import sys
@@ -4147,6 +4145,28 @@ def test_crystalball_function_moments():
     assert_allclose(expected_5th_moment, calculated_5th_moment, rtol=0.001)
 
 
+@pytest.mark.parametrize(
+    'df1,df2,x',
+    [(2, 2, [-0.5, 0.2, 1.0, 2.3]),
+     (4, 11, [-0.5, 0.2, 1.0, 2.3]),
+     (7, 17, [1, 2, 3, 4, 5])]
+)
+def test_ncf_edge_case(df1, df2, x):
+    # Test for edge case described in gh-11660.
+    # Non-central Fisher distribution when nc = 0
+    # should be the same as Fisher distribution.
+    nc = 0
+    expected_cdf = stats.f.cdf(x, df1, df2)
+    calculated_cdf = stats.ncf.cdf(x, df1, df2, nc)
+    assert_allclose(expected_cdf, calculated_cdf, rtol=1e-14)
+
+    # when ncf_gen._skip_pdf will be used instead of generic pdf,
+    # this additional test will be useful.
+    expected_pdf = stats.f.pdf(x, df1, df2)
+    calculated_pdf = stats.ncf.pdf(x, df1, df2, nc)
+    assert_allclose(expected_pdf, calculated_pdf, rtol=1e-6)
+
+
 def test_ncf_variance():
     # Regression test for gh-10658 (incorrect variance formula for ncf).
     # The correct value of ncf.var(2, 6, 4), 42.75, can be verified with, for
@@ -4248,7 +4268,7 @@ class TestHistogram(object):
     def test_munp(self):
         for n in range(4):
             assert_allclose(self.norm_template._munp(n),
-                            stats.norm._munp(n, 1.0, 2.5), rtol=0.05)
+                            stats.norm(1.0, 2.5).moment(n), rtol=0.05)
 
     def test_entropy(self):
         assert_allclose(self.norm_template.entropy(),

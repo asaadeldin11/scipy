@@ -48,7 +48,6 @@ All functions
 .. autosummary::
    :toctree: generated/
 
-
    sgbsv
    dgbsv
    cgbsv
@@ -269,6 +268,11 @@ All functions
    cgtsv
    zgtsv
 
+   sgtsvx
+   dgtsvx
+   cgtsvx
+   zgtsvx
+
    chbevd
    zhbevd
 
@@ -386,6 +390,11 @@ All functions
    clauum
    zlauum
 
+   sorcsd
+   dorcsd
+   sorcsd_lwork
+   dorcsd_lwork
+
    sorghr
    dorghr
    sorghr_lwork
@@ -480,6 +489,21 @@ All functions
    dptsv
    cptsv
    zptsv
+
+   spttrf
+   dpttrf
+   cpttrf
+   zpttrf
+
+   spttrs
+   dpttrs
+   cpttrs
+   zpttrs
+
+   spteqr
+   dpteqr
+   cpteqr
+   zpteqr
 
    crot
    zrot
@@ -707,6 +731,16 @@ All functions
    cgemqrt
    zgemqrt
 
+   sgttrf
+   dgttrf
+   cgttrf
+   zgttrf
+
+   sgttrs
+   dgttrs
+   cgttrs
+   zgttrs
+
    stpqrt
    dtpqrt
    ctpqrt
@@ -716,6 +750,12 @@ All functions
    dtpmqrt
    ctpmqrt
    ztpmqrt
+
+   cuncsd
+   zuncsd
+
+   cuncsd_lwork
+   zuncsd_lwork
 
    cunmrz
    zunmrz
@@ -730,7 +770,6 @@ All functions
 # Author: Pearu Peterson, March 2002
 #
 
-from __future__ import division, print_function, absolute_import
 import numpy as _np
 from .blas import _get_funcs, _memoize_get_funcs
 from scipy.linalg import _flapack
