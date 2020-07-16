@@ -109,14 +109,15 @@ def test_alap():
     for i, sign in enumerate([-1, 1]):
         for node in [5,10,20]:
             cost_matrix = np.random.uniform(0, 50, (node, node))
-            maximize = sign == -1
-            exact_assign = linear_sum_assignment(cost_matrix,
+            maximize = (sign == 1)
+            exact_assign = linear_sum_assignment(sign*cost_matrix,
                                                      maximize=maximize)
-            app_assign = linear_sum_assignment(cost_matrix,
+            app_assign = linear_sum_assignment(sign*cost_matrix,
                                                      maximize=maximize,
-                                               method = 'approx')
-            exact_score = cost_matrix[exact_assign].sum()
-            app_score = cost_mkatrix[app_assign].sum()
+                                                     method='approx')
 
-            assert sign * app_score < sign * 2**sign * exact_score
+            exact_score = cost_matrix[exact_assign].sum()
+            app_score = cost_matrix[app_assign].sum()
+
+            assert app_score > 1/2 * exact_score
 
