@@ -100,3 +100,23 @@ def test_constant_cost_matrix():
     row_ind, col_ind = linear_sum_assignment(C)
     assert_array_equal(row_ind, np.arange(n))
     assert_array_equal(col_ind, np.arange(n))
+
+def test_alap():
+    # test alap performance
+    # when maximize, alao result should be greater than 1/2 lap score
+    # when minimize, alap result should be less than twice lap score
+
+    for i, sign in enumerate([-1, 1]):
+        for node in [5,10,20]:
+            cost_matrix = np.random.uniform(0, 50, (node, node))
+            maximize = sign == -1
+            exact_assign = linear_sum_assignment(cost_matrix,
+                                                     maximize=maximize)
+            app_assign = linear_sum_assignment(cost_matrix,
+                                                     maximize=maximize,
+                                               method = 'approx')
+            exact_score = cost_matrix[exact_assign].sum()
+            app_score = cost_mkatrix[app_assign].sum()
+
+            assert sign * app_score < sign * 2**sign * exact_score
+
