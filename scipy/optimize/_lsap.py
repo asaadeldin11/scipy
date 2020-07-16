@@ -13,7 +13,7 @@ import numpy as np
 from . import _lsap_module
 
 
-def linear_sum_assignment(cost_matrix, maximize=False):
+def linear_sum_assignment(cost_matrix, maximize=False, method = 'exact'):
     """Solve the linear sum assignment problem.
 
     The linear sum assignment problem is also known as minimum weight matching
@@ -95,11 +95,89 @@ def linear_sum_assignment(cost_matrix, maximize=False):
     cost_matrix = cost_matrix.astype(np.double)
     a = np.arange(np.min(cost_matrix.shape))
 
-    # The algorithm expects more columns than rows in the cost matrix.
-    if cost_matrix.shape[1] < cost_matrix.shape[0]:
-        b = _lsap_module.calculate_assignment(cost_matrix.T)
-        indices = np.argsort(b)
-        return (b[indices], a[indices])
+    if method == 'approx':
+        return _alap(cost_matrix, maximize)
     else:
-        b = _lsap_module.calculate_assignment(cost_matrix)
-        return (a, b)
+        # The algorithm expects more columns than rows in the cost matrix.
+        if cost_matrix.shape[1] < cost_matrix.shape[0]:
+            b = _lsap_module.calculate_assignment(cost_matrix.T)
+            indices = np.argsort(b)
+            return (b[indices], a[indices])
+        else:
+            b = _lsap_module.calculate_assignment(cost_matrix)
+            return (a, b)
+
+
+def _alap(cost_matrix, maximize):
+    if not maximize:
+        cost_matrix = -cost_matrix
+    num_vert = cost_matrix.shape[0]
+    n = 2 * num_vert
+    matched = np.empty(n) * np.nan
+    cv = np.zeros(n)
+    col_argmax = np.argmax(cost_matrix, axis=0)
+    row_argmax = np.argmax(cost_matrix, axis=1)
+
+    # remove full zero rows and columns (match them)
+    col_z = np.count_nonzero(cost_matrix, axis=0)
+    col_z = np.arange(num_vert)[col_z == num_vert * np.ones(num_vert)]
+    row_z = np.count_nonzero(cost_matrix, axis=1)
+    row_z = np.arange(num_vert)[row_z == num_vert * np.ones(num_vert)]
+    mz = min([len(row_z), len(col_z)])
+    col_z = col_z[:mz]
+    row_z = row_z[:mz]
+
+    cv[:num_vert] = col_argmax + num_vert
+    # first half points to second, vice versa
+    cv[num_vert:] = row_argmax
+    cv[col_z] = row_z + num_vert
+    cv[row_z + num_vert] = col_z
+    cv = cv.astype(int)
+
+    dom_ind = cv[cv] == np.arange(n)
+    matched[dom_ind] = cv[dom_ind]  # matched indices, everywhere else nan
+    qc, = np.nonzero(dom_ind)  # dominating vertices
+
+    while (
+            len(qc) > 0 and np.isnan(matched).any()
+    ):  # loop while qc not empty, ie new matchings still being found
+
+        temp = np.arange(n)[np.in1d(cv, qc)]  # indices of qc in cv
+        qt = temp[
+            ~np.in1d(temp, matched[qc])
+        ]  # indices of unmatched verts in cv and qc
+
+        qt_p = qt[qt >= num_vert]
+        qt_n = qt[qt < num_vert]
+
+        m_row = np.arange(num_vert)[
+            np.isnan(matched[num_vert:])
+        ]  # unmatched rows to check
+        m_col = np.arange(num_vert)[np.isnan(matched[:num_vert])]
+        # unmatched cols
+
+        col_argmax = np.argmax(cost_matrix[np.ix_(m_row, qt_n)], axis=0)
+        row_argmax = np.argmax(cost_matrix[np.ix_(qt_p - num_vert, m_col)], axis=1)
+
+        col_argmax = m_row[col_argmax]
+        row_argmax = m_col[row_argmax]
+
+        cv[qt_n] = col_argmax + num_vert
+        cv[qt_p] = row_argmax
+        cv = cv.astype(int)
+
+        dom_ind = cv[cv[qt]] == qt
+        qt = qt[dom_ind]
+        matched[qt] = cv[qt]  # adding new dominating indices to matching
+        matched[cv[qt]] = qt
+
+        qn = np.zeros(n)  # store new matchings
+        qn[qt] = qt
+        qn[cv[qt]] = cv[qt]
+        qc = qn[qn > 0].astype(int)
+
+    matching = matched[num_vert:]
+    rows = np.arange(num_vert)[~np.isnan(matching)]
+    matching = matching[~np.isnan(matching)].astype(int)
+
+    return (rows, matching)
