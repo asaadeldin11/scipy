@@ -46,7 +46,16 @@ def linear_sum_assignment(cost_matrix, maximize=False, method='exact'):
     maximize : bool (default: False)
         Calculates a maximum weight matching if true.
 
-    method :
+    method : string (default: 'exact')
+        'exact' : By default, the linear assignment problem is solved exactly
+        using the Jonker-Volgenant algorithm.
+
+        'approx' : if `cost_matrix` is sufficiently large
+        (``cost_matrix.shape[0] > 500``) and one is performing a
+        computationally expensive task, it may be advantageous to use the
+        approximation algorithm. The algorithm provides a speedup without
+        much loss of accuracy.
+
     Returns
     -------
     row_ind, col_ind : array
@@ -68,6 +77,12 @@ def linear_sum_assignment(cost_matrix, maximize=False, method='exact'):
     2. DF Crouse. On implementing 2D rectangular assignment algorithms.
        *IEEE Transactions on Aerospace and Electronic Systems*,
        52(4):1679-1696, August 2016, https://doi.org/10.1109/TAES.2016.140952
+
+    3. Manne F., Bisseling R.H. (2008) A Parallel Approximation Algorithm for
+       the Weighted Maximum Matching Problem. In: Wyrzykowski R., Dongarra J.,
+       Karczewski K., Wasniewski J. (eds) Parallel Processing and Applied
+       Mathematics. PPAM 2007. Lecture Notes in Computer Science, vol 4967,
+       https://doi.org/10.1007/978-3-540-68111-3_74
 
     Examples
     --------
@@ -130,20 +145,24 @@ def _alap(cost_matrix, maximize):
     matched[dom_ind] = cv[dom_ind]  # matched indices, everywhere else nan
     qc, = np.nonzero(dom_ind)  # dominating vertices
 
-    while len(qc) > 0 and np.isnan(
-            matched[n_col:]).any():  # loop while qc not empty, ie new matchings still being found
+    while len(qc) > 0 and np.isnan(matched[n_col:]).any():
+        # loop while qc not empty, ie new matchings still being found
 
         temp = np.arange(n)[np.in1d(cv, qc)]  # indices of qc in cv
-        qt = temp[~np.in1d(temp, matched[qc])]  # indices of unmatched verts in cv and qc
+        # indices of unmatched verts in cv and qc
+        qt = temp[~np.in1d(temp, matched[qc])]
 
         qt_p = qt[qt >= n_col]
         qt_n = qt[qt < n_col]
 
-        m_row = np.arange(n_row)[np.isnan(matched[n_col:])]  # unmatched rows to check
-        m_col = np.arange(n_col)[np.isnan(matched[:n_col])]  # unmatched cols
+        # unmatched rows to check
+        m_row = np.arange(n_row)[np.isnan(matched[n_col:])]
+        # unmatched cols
+        m_col = np.arange(n_col)[np.isnan(matched[:n_col])]
 
         col_argmax = np.argmax(cost_matrix[np.ix_(m_row, qt_n)], axis=0)
-        row_argmax = np.argmax(cost_matrix[np.ix_(qt_p - n_col, m_col)], axis=1)
+        row_argmax = np.argmax(cost_matrix[
+                                   np.ix_(qt_p - n_col, m_col)], axis=1)
 
         col_argmax = m_row[col_argmax]
         row_argmax = m_col[row_argmax]
